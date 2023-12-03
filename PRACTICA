@@ -1,0 +1,103 @@
+#!/bin/bash
+
+
+#miramos o usuario
+usuario=$( whoami )
+
+#cambiamos ':' por un espacio
+cat paquetes.txt | tr -s ':' ' ' > paquetestemp.txt
+
+
+#iniciamos o contador que lee paquetestemp.txt
+i=0
+while read paquete action
+do
+paquetes[$i]="$paquete"
+acciones[$i]="$action"
+((i++))
+
+done < paquetestemp.txt
+
+
+#funcion para borrar
+
+function borrarPaquete(){
+paquete=$( echo ${paquetes[$b]})
+if [[ $instalado -gt 0 ]];
+then
+sudo apt remove $paquete -y
+else
+echo El paquete $paquete no esta instalado
+fi
+}
+
+#funcion para instalar
+
+function instalarPaquete(){
+paquete=$( echo ${paquetes[$b]})
+if [[ $instalado -eq 0 ]] ;
+then
+sudo apt install $paquete -y &> /dev/null
+else
+echo El paquete $paquete ya esta instalado
+fi
+
+}
+
+#funcion para verificar o estado
+
+function statusPaquete(){
+paquete=$( echo ${paquetes[$b]})
+if [[ $instalado -eq 0 ]] ;
+then
+echo El paquete $paquete NO esta instalado
+else
+echo El paquete $paquete esta instalado
+fi
+}
+
+
+#funcion para realizar accion especifica
+
+function accionPaquete(){
+for (( b=0; b <$i; b++ ))
+do
+accion=$( echo ${acciones[$b]})
+paquete=$( echo ${paquetes[$b]})
+instalado=$( whereis $paquete | grep bin | wc -l )
+case $accion in
+"add"*)
+instalarPaquete "${paquetes[@]}" $instalado
+;;
+"remove"*)
+borrarPaquete "${paquetes[@]}" $instalado
+;;
+"status"*)
+statusPaquete "${paquetes[@]}" $instalado
+;;
+*)
+exit
+;;
+
+esac
+done
+}
+
+
+#verificamos si estamos en root ou non
+
+if [[ ${usuario} = "root" ]] ;
+then
+echo Se van actualizar las paqueterias:
+sudo apt update &> /dev/null
+echo Se cargan los datos:
+
+
+echo Se van a realizar las acciones
+for (( b=0; b <$i; b++ ))
+do
+accionPaquete "${paquetes[@]}" "${acciones[@]}"
+done
+else
+echo ERROR: El usuario tiene que ser root
+fi
